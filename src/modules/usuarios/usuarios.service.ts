@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,19 +12,35 @@ import { Usuario } from './entities/usuario.entity';
 
 @Injectable()
 export class UsuariosService {
+  private readonly logger = new Logger(UsuariosService.name);
+
   constructor(
     @InjectRepository(Usuario)
     private readonly usuariosRepository: Repository<Usuario>,
   ) {}
 
   async create(dto: CreateUsuarioDto): Promise<Usuario> {
+    this.logger.log(`create() llamado — correo: ${dto.correo}, rol_id: ${dto.rol_id}, estado_id: ${dto.estado_id}`);
+
     const existing = await this.usuariosRepository.findOne({
       where: { correo: dto.correo },
     });
-    if (existing) throw new ConflictException('El correo ya está registrado');
+    if (existing) {
+      this.logger.warn(`create() bloqueado — correo ya registrado: ${dto.correo}`);
+      throw new ConflictException('El correo ya está registrado');
+    }
 
     const usuario = this.usuariosRepository.create(dto);
-    return this.usuariosRepository.save(usuario);
+    this.logger.log(`Entidad creada en memoria, ejecutando save()...`);
+
+    try {
+      const saved = await this.usuariosRepository.save(usuario);
+      this.logger.log(`save() exitoso — id_usuarios: ${saved.id_usuarios}`);
+      return saved;
+    } catch (error) {
+      this.logger.error(`save() falló: ${(error as Error).message}`, (error as Error).stack);
+      throw error;
+    }
   }
 
   findAll(): Promise<Usuario[]> {
