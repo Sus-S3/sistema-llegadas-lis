@@ -9,16 +9,18 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   private readonly logger = new Logger(GoogleStrategy.name);
 
   constructor(
-    configService: ConfigService,
-    private readonly authService: AuthService,
-  ) {
-    super({
-      clientID: configService.getOrThrow<string>('GOOGLE_CLIENT_ID'),
-      clientSecret: configService.getOrThrow<string>('GOOGLE_CLIENT_SECRET'),
-      callbackURL: process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3000/auth/google/callback',
-      scope: ['email', 'profile'],
-    });
-  }
+  configService: ConfigService,
+  private readonly authService: AuthService,
+) {
+  const callbackURL = process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3000/auth/google/callback';
+  console.log('>>> GOOGLE_CALLBACK_URL en runtime:', callbackURL);
+  super({
+    clientID: configService.getOrThrow<string>('GOOGLE_CLIENT_ID'),
+    clientSecret: configService.getOrThrow<string>('GOOGLE_CLIENT_SECRET'),
+    callbackURL,
+    scope: ['email', 'profile'],
+  });
+}
 
   async validate(
     _accessToken: string,
