@@ -7,6 +7,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './modules/auth/auth.module';
+import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
+import { LaboratoriosModule } from './modules/laboratorios/laboratorios.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 
 @Module({
@@ -22,6 +24,8 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
     }),
     AuthModule,
     UsuariosModule,
+    LaboratoriosModule,
+    DispositivosModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
