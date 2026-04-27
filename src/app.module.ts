@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
+import { EstadosModule } from './modules/estados/estados.module';
 import { LaboratoriosModule } from './modules/laboratorios/laboratorios.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 
@@ -26,6 +27,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
     UsuariosModule,
     LaboratoriosModule,
     DispositivosModule,
+    EstadosModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
