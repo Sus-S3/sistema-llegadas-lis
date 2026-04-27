@@ -2,6 +2,7 @@ import { DataSource, Repository } from 'typeorm';
 import { CategoriaEstado } from '../modules/estados/entities/categoria-estado.entity';
 import { Estado } from '../modules/laboratorios/entities/estado.entity';
 import { Rol } from '../modules/roles/entities/rol.entity';
+import { Usuario } from '../modules/usuarios/entities/usuario.entity';
 
 // ─── datos ────────────────────────────────────────────────────────────────────
 
@@ -56,14 +57,55 @@ async function seedEstados(
   }
 }
 
-async function seedRoles(repo: Repository<Rol>, estadoActivoId: number): Promise<void> {
+async function seedRoles(
+  repo: Repository<Rol>,
+  estadoActivoId: number,
+): Promise<Map<string, number>> {
   console.log('[Seed] Roles');
 
-  await repo.clear();
-
+  const rolMap = new Map<string, number>();
   for (const nombre of ROLES) {
-    await repo.save(repo.create({ nombre, estado_id: estadoActivoId }));
-    console.log(`[Seed]   ✓ ${nombre}`);
+    let rol = await repo.findOne({ where: { nombre } });
+    if (!rol) {
+      rol = await repo.save(repo.create({ nombre, estado_id: estadoActivoId }));
+      console.log(`[Seed]   ✓ ${nombre} (id=${rol.id_roles})`);
+    } else if (rol.estado_id !== estadoActivoId) {
+      rol.estado_id = estadoActivoId;
+      rol = await repo.save(rol);
+    }
+    rolMap.set(nombre, rol.id_roles);
+  }
+
+  return rolMap;
+}
+
+async function seedUsuarios(
+  repo: Repository<Usuario>,
+  rolMap: Map<string, number>,
+): Promise<void> {
+  console.log('[Seed] Usuarios');
+
+  const idAuxiliar     = rolMap.get('Auxiliar administrativo')!;
+  const idAdministrador = rolMap.get('Administrador')!;
+  const idsValidos      = [...rolMap.values()];
+
+  const usuarios = await repo.find();
+
+  for (const usuario of usuarios) {
+    const rolInvalido = !idsValidos.includes(usuario.rol_id);
+    const esSusana    = usuario.correo === 'susana.suareza@udea.edu.co';
+
+    const nuevoRolId = esSusana
+      ? idAdministrador
+      : rolInvalido
+        ? idAuxiliar
+        : null;
+
+    if (nuevoRolId !== null && usuario.rol_id !== nuevoRolId) {
+      usuario.rol_id = nuevoRolId;
+      await repo.save(usuario);
+      console.log(`[Seed]   ✓ ${usuario.correo} → rol_id ${nuevoRolId}`);
+    }
   }
 }
 
@@ -73,6 +115,7 @@ export async function runSeed(dataSource: DataSource): Promise<void> {
   const categoriaRepo = dataSource.getRepository(CategoriaEstado);
   const estadoRepo    = dataSource.getRepository(Estado);
   const rolRepo       = dataSource.getRepository(Rol);
+  const usuarioRepo   = dataSource.getRepository(Usuario);
 
   const idMap = await seedCategorias(categoriaRepo);
   await seedEstados(estadoRepo, idMap);
@@ -80,7 +123,8 @@ export async function runSeed(dataSource: DataSource): Promise<void> {
   const estadoActivo = await estadoRepo.findOneOrFail({
     where: { nombre: 'Activo', categoria_estado_id: idMap.get('GENERAL') },
   });
-  await seedRoles(rolRepo, estadoActivo.id_estados);
+  const rolMap = await seedRoles(rolRepo, estadoActivo.id_estados);
+  await seedUsuarios(usuarioRepo, rolMap);
 
   console.log('[Seed] ✅ Completado');
 }
