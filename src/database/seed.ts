@@ -15,7 +15,7 @@ const ESTADOS_POR_CATEGORIA: Record<string, string[]> = {
   REEMPLAZO:     ['Pendiente', 'Aprobado', 'Rechazado'],
 };
 
-const ROLES = ['Administrador', 'Coordinador', 'Auxiliar'];
+const ROLES = ['Auxiliar administrativo', 'Auxiliar de programación', 'Administrador'];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,15 +56,14 @@ async function seedEstados(
   }
 }
 
-async function seedRoles(repo: Repository<Rol>): Promise<void> {
+async function seedRoles(repo: Repository<Rol>, estadoActivoId: number): Promise<void> {
   console.log('[Seed] Roles');
 
+  await repo.clear();
+
   for (const nombre of ROLES) {
-    const existe = await repo.findOne({ where: { nombre } });
-    if (!existe) {
-      await repo.save(repo.create({ nombre }));
-      console.log(`[Seed]   ✓ ${nombre}`);
-    }
+    await repo.save(repo.create({ nombre, estado_id: estadoActivoId }));
+    console.log(`[Seed]   ✓ ${nombre}`);
   }
 }
 
@@ -77,7 +76,11 @@ export async function runSeed(dataSource: DataSource): Promise<void> {
 
   const idMap = await seedCategorias(categoriaRepo);
   await seedEstados(estadoRepo, idMap);
-  await seedRoles(rolRepo);
+
+  const estadoActivo = await estadoRepo.findOneOrFail({
+    where: { nombre: 'Activo', categoria_estado_id: idMap.get('GENERAL') },
+  });
+  await seedRoles(rolRepo, estadoActivo.id_estados);
 
   console.log('[Seed] ✅ Completado');
 }
