@@ -11,6 +11,7 @@ import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
 import { EstadosModule } from './modules/estados/estados.module';
 import { LaboratoriosModule } from './modules/laboratorios/laboratorios.module';
 import { RolesModule } from './modules/roles/roles.module';
+import { TarjetasModule } from './modules/tarjetas/tarjetas.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
     DispositivosModule,
     EstadosModule,
     RolesModule,
+    TarjetasModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
