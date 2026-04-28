@@ -90,6 +90,7 @@ async function seedUsuarios(
   const idsValidos      = [...rolMap.values()];
 
   const usuarios = await repo.find();
+  let corregidos = 0;
 
   for (const usuario of usuarios) {
     const rolInvalido = !idsValidos.includes(usuario.rol_id);
@@ -105,8 +106,11 @@ async function seedUsuarios(
       usuario.rol_id = nuevoRolId;
       await repo.save(usuario);
       console.log(`[Seed]   ✓ ${usuario.correo} → rol_id ${nuevoRolId}`);
+      corregidos++;
     }
   }
+
+  console.log(`[Seed]   ${corregidos} usuario(s) con rol inválido corregido(s)`);
 }
 
 // ─── función exportada ────────────────────────────────────────────────────────
