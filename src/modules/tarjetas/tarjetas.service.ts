@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Estado } from '../laboratorios/entities/estado.entity';
 import { CreateTarjetaDto } from './dto/create-tarjeta.dto';
 import { UpdateTarjetaDto } from './dto/update-tarjeta.dto';
 import { Tarjeta } from './entities/tarjeta.entity';
@@ -17,6 +18,8 @@ export class TarjetasService {
   constructor(
     @InjectRepository(Tarjeta)
     private readonly tarjetasRepository: Repository<Tarjeta>,
+    @InjectRepository(Estado)
+    private readonly estadosRepository: Repository<Estado>,
   ) {}
 
   findAll(): Promise<Tarjeta[]> {
@@ -37,6 +40,24 @@ export class TarjetasService {
       where: { uid_nfc },
       relations: ['usuario', 'estado'],
     });
+  }
+
+  async registrarFisica(uid_nfc: string): Promise<{ id_tarjeta: number; uid_nfc: string; nueva: boolean }> {
+    const existente = await this.tarjetasRepository.findOne({ where: { uid_nfc } });
+    if (existente) {
+      return { id_tarjeta: existente.id_tarjeta, uid_nfc: existente.uid_nfc, nueva: false };
+    }
+
+    const estadoActivo = await this.estadosRepository.findOneOrFail({
+      where: { nombre: 'Activo' },
+    });
+
+    const nueva = await this.tarjetasRepository.save(
+      this.tarjetasRepository.create({ uid_nfc, estado_id: estadoActivo.id_estados, usuario_id: null }),
+    );
+
+    this.logger.log(`registrarFisica() — tarjeta nueva uid_nfc: ${uid_nfc}, id: ${nueva.id_tarjeta}`);
+    return { id_tarjeta: nueva.id_tarjeta, uid_nfc: nueva.uid_nfc, nueva: true };
   }
 
   async create(dto: CreateTarjetaDto): Promise<Tarjeta> {

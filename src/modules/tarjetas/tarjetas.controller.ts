@@ -11,8 +11,10 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CreateTarjetaDto } from './dto/create-tarjeta.dto';
+import { RegistrarFisicaDto } from './dto/registrar-fisica.dto';
 import { UpdateTarjetaDto } from './dto/update-tarjeta.dto';
 import { TarjetasService } from './tarjetas.service';
 
@@ -29,6 +31,12 @@ export class TarjetasController {
   @Get()
   findAll() {
     return this.tarjetasService.findAll();
+  }
+
+  @Public()
+  @Post('registrar-fisica')
+  registrarFisica(@Body() dto: RegistrarFisicaDto) {
+    return this.tarjetasService.registrarFisica(dto.uid_nfc);
   }
 
   @Get(':id')
