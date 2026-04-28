@@ -103,6 +103,7 @@ async function seedUsuarios(
         : null;
 
     if (nuevoRolId !== null && usuario.rol_id !== nuevoRolId) {
+      console.log(`[Seed] Corrigiendo usuario ${usuario.correo}, rol_id actual: ${usuario.rol_id} → nuevo: ${nuevoRolId}`);
       usuario.rol_id = nuevoRolId;
       await repo.save(usuario);
       console.log(`[Seed]   ✓ ${usuario.correo} → rol_id ${nuevoRolId}`);
