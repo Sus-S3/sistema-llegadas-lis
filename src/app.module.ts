@@ -12,6 +12,7 @@ import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
 import { EstadosModule } from './modules/estados/estados.module';
 import { LaboratoriosModule } from './modules/laboratorios/laboratorios.module';
 import { HorariosModule } from './modules/horarios/horarios.module';
+import { JustificacionesModule } from './modules/justificaciones/justificaciones.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { TarjetasModule } from './modules/tarjetas/tarjetas.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -36,6 +37,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
     TarjetasModule,
     AsistenciaModule,
     HorariosModule,
+    JustificacionesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
