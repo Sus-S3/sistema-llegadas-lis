@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Horario } from '../../horarios/entities/horario.entity';
 import { Estado } from '../../laboratorios/entities/estado.entity';
 import { Tarjeta } from '../../tarjetas/entities/tarjeta.entity';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
@@ -41,6 +42,13 @@ export class Asistencia {
   @ManyToOne(() => Estado, { nullable: true, eager: false })
   @JoinColumn({ name: 'estado_id' })
   estado!: Estado | null;
+
+  @Column({ name: 'horario_id', type: 'int', nullable: true })
+  horario_id!: number | null;
+
+  @ManyToOne(() => Horario, { nullable: true, eager: false })
+  @JoinColumn({ name: 'horario_id' })
+  horario!: Horario | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'creado_en' })
   creado_en!: Date;

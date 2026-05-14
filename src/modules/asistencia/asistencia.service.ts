@@ -54,16 +54,30 @@ export class AsistenciaService {
       correo: tarjeta.usuario.correo,
     };
 
-    // Idempotencia: si ya marcó hoy, devolver registro existente
-    const existente = await this.asistenciaRepository
+    // Resolver horario ANTES del duplicado — la clave de unicidad incluye horario_id
+    const diaSemana = DIAS_SEMANA[new Date().getDay()];
+    const horario = await this.horariosService.findHorarioActivo(tarjeta.usuario_id, diaSemana);
+    const horario_id = horario?.id_horarios ?? null;
+
+    // Duplicado: usuario + horario + fecha de hoy
+    // Si hay horario: permite registrar una vez por cada horario distinto del día
+    // Si no hay horario: permite un único registro diario (horario_id IS NULL)
+    const duplicadoQb = this.asistenciaRepository
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.estado', 'e')
       .where('a.usuario_id = :usuario_id', { usuario_id: tarjeta.usuario_id })
-      .andWhere('DATE(a.fecha_hora) = CURRENT_DATE')
-      .getOne();
+      .andWhere('DATE(a.fecha_hora) = CURRENT_DATE');
+
+    if (horario_id !== null) {
+      duplicadoQb.andWhere('a.horario_id = :horario_id', { horario_id });
+    } else {
+      duplicadoQb.andWhere('a.horario_id IS NULL');
+    }
+
+    const existente = await duplicadoQb.getOne();
 
     if (existente) {
-      this.logger.log(`marcar() — ya registrado hoy: ${tarjeta.usuario.correo}`);
+      this.logger.log(`marcar() — ya registrado hoy (horario_id=${horario_id}): ${tarjeta.usuario.correo}`);
       return {
         mensaje: 'Asistencia ya registrada hoy',
         ya_registrado: true,
@@ -73,10 +87,7 @@ export class AsistenciaService {
       };
     }
 
-    // Clasificar según horario del día
-    const diaSemana = DIAS_SEMANA[new Date().getDay()];
-    const horario = await this.horariosService.findHorarioActivo(tarjeta.usuario_id, diaSemana);
-
+    // Clasificar según diferencia con hora_inicio del horario
     let estado_id: number | null = null;
     let clasificacion: string | null = null;
 
@@ -100,11 +111,12 @@ export class AsistenciaService {
       fecha_hora,
       tipo: 'entrada',
       estado_id,
+      horario_id,
     });
     await this.asistenciaRepository.save(asistencia);
 
     this.logger.log(
-      `marcar() — usuario: ${tarjeta.usuario.correo}, clasificacion: ${clasificacion ?? 'sin horario'}`,
+      `marcar() — usuario: ${tarjeta.usuario.correo}, horario_id: ${horario_id}, clasificacion: ${clasificacion ?? 'sin horario'}`,
     );
 
     return {
