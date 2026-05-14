@@ -15,6 +15,13 @@ import { Asistencia } from './entities/asistencia.entity';
 
 const TOLERANCIA_MINUTOS = 10;
 const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+const TZ = 'America/Bogota';
+
+/** Devuelve minutos desde medianoche en la zona horaria del proyecto. */
+function minutosLocales(date: Date): number {
+  const local = new Date(date.toLocaleString('en-US', { timeZone: TZ }));
+  return local.getHours() * 60 + local.getMinutes();
+}
 
 @Injectable()
 export class AsistenciaService {
@@ -92,8 +99,7 @@ export class AsistenciaService {
     let clasificacion: string | null = null;
 
     if (horario) {
-      const ahora = new Date();
-      const minutosAhora = ahora.getHours() * 60 + ahora.getMinutes();
+      const minutosAhora = minutosLocales(new Date());
       const [hh, mm] = horario.hora_inicio.split(':').map(Number);
       const minutosEsperados = hh * 60 + mm;
       const tardanza = minutosAhora - minutosEsperados;
