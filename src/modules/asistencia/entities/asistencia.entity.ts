@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Estado } from '../../laboratorios/entities/estado.entity';
 import { Tarjeta } from '../../tarjetas/entities/tarjeta.entity';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
 
@@ -33,6 +34,13 @@ export class Asistencia {
 
   @Column({ type: 'varchar', length: 20, default: 'entrada' })
   tipo!: string;
+
+  @Column({ name: 'estado_id', type: 'int', nullable: true })
+  estado_id!: number | null;
+
+  @ManyToOne(() => Estado, { nullable: true, eager: false })
+  @JoinColumn({ name: 'estado_id' })
+  estado!: Estado | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'creado_en' })
   creado_en!: Date;

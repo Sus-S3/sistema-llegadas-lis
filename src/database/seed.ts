@@ -1,6 +1,8 @@
 import { DataSource, Repository } from 'typeorm';
 import { CategoriaEstado } from '../modules/estados/entities/categoria-estado.entity';
+import { Horario } from '../modules/horarios/entities/horario.entity';
 import { Estado } from '../modules/laboratorios/entities/estado.entity';
+import { Laboratorio } from '../modules/laboratorios/entities/laboratorio.entity';
 import { Rol } from '../modules/roles/entities/rol.entity';
 import { Usuario } from '../modules/usuarios/entities/usuario.entity';
 
@@ -114,13 +116,78 @@ async function seedUsuarios(
   console.log(`[Seed]   ${corregidos} usuario(s) con rol inválido corregido(s)`);
 }
 
+// ─── horarios de prueba ───────────────────────────────────────────────────────
+
+// Cambiar a 20 para probar clasificación "Tarde"
+const MINUTOS_ANTES_DE_AHORA = 5;
+
+const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
+
+function formatHora(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+async function seedHorarios(
+  horarioRepo: Repository<Horario>,
+  usuarioRepo: Repository<Usuario>,
+  laboratorioRepo: Repository<Laboratorio>,
+  estadoRepo: Repository<Estado>,
+): Promise<void> {
+  console.log('[Seed] Horarios de prueba');
+
+  const susana = await usuarioRepo.findOne({ where: { correo: 'susana.suareza@udea.edu.co' } });
+  if (!susana) {
+    console.log('[Seed]   ⚠ Usuario susana.suareza@udea.edu.co no encontrado, saltando horarios');
+    return;
+  }
+
+  const laboratorio = await laboratorioRepo.findOne({ where: {} });
+  if (!laboratorio) {
+    console.log('[Seed]   ⚠ No hay laboratorios registrados, saltando horarios');
+    return;
+  }
+
+  const estadoActivo = await estadoRepo.findOne({ where: { nombre: 'Activo' } });
+  if (!estadoActivo) {
+    console.log('[Seed]   ⚠ Estado "Activo" no encontrado, saltando horarios');
+    return;
+  }
+
+  const diaSemana = DIAS_SEMANA[new Date().getDay()];
+  const horaInicio = new Date(Date.now() - MINUTOS_ANTES_DE_AHORA * 60 * 1000);
+  const horaFin    = new Date(horaInicio.getTime() + 4 * 60 * 60 * 1000);
+
+  // Idempotente: borra y recrea para que refleje la hora actual al correr el seed
+  const existente = await horarioRepo.findOne({
+    where: { usuario_id: susana.id_usuarios, dia_semana: diaSemana },
+  });
+  if (existente) {
+    await horarioRepo.remove(existente);
+  }
+
+  await horarioRepo.save(
+    horarioRepo.create({
+      usuario_id:    susana.id_usuarios,
+      laboratorio_id: laboratorio.id_laboratorios,
+      dia_semana:    diaSemana,
+      hora_inicio:   formatHora(horaInicio),
+      hora_fin:      formatHora(horaFin),
+      estado_id:     estadoActivo.id_estados,
+    }),
+  );
+
+  console.log(`[Seed]   ✓ Horario ${diaSemana} ${formatHora(horaInicio)}–${formatHora(horaFin)} → susana (laboratorio_id=${laboratorio.id_laboratorios})`);
+}
+
 // ─── función exportada ────────────────────────────────────────────────────────
 
 export async function runSeed(dataSource: DataSource): Promise<void> {
-  const categoriaRepo = dataSource.getRepository(CategoriaEstado);
-  const estadoRepo    = dataSource.getRepository(Estado);
-  const rolRepo       = dataSource.getRepository(Rol);
-  const usuarioRepo   = dataSource.getRepository(Usuario);
+  const categoriaRepo   = dataSource.getRepository(CategoriaEstado);
+  const estadoRepo      = dataSource.getRepository(Estado);
+  const rolRepo         = dataSource.getRepository(Rol);
+  const usuarioRepo     = dataSource.getRepository(Usuario);
+  const laboratorioRepo = dataSource.getRepository(Laboratorio);
+  const horarioRepo     = dataSource.getRepository(Horario);
 
   const idMap = await seedCategorias(categoriaRepo);
   await seedEstados(estadoRepo, idMap);
@@ -130,6 +197,7 @@ export async function runSeed(dataSource: DataSource): Promise<void> {
   });
   const rolMap = await seedRoles(rolRepo, estadoActivo.id_estados);
   await seedUsuarios(usuarioRepo, rolMap);
+  await seedHorarios(horarioRepo, usuarioRepo, laboratorioRepo, estadoRepo);
 
   console.log('[Seed] ✅ Completado');
 }

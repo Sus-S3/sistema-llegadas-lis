@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Estado } from '../laboratorios/entities/estado.entity';
+import { Usuario } from '../usuarios/entities/usuario.entity';
 import { CreateTarjetaDto } from './dto/create-tarjeta.dto';
 import { UpdateTarjetaDto } from './dto/update-tarjeta.dto';
 import { Tarjeta } from './entities/tarjeta.entity';
@@ -20,6 +21,8 @@ export class TarjetasService {
     private readonly tarjetasRepository: Repository<Tarjeta>,
     @InjectRepository(Estado)
     private readonly estadosRepository: Repository<Estado>,
+    @InjectRepository(Usuario)
+    private readonly usuariosRepository: Repository<Usuario>,
   ) {}
 
   findAll(): Promise<Tarjeta[]> {
@@ -70,14 +73,21 @@ export class TarjetasService {
       throw new BadRequestException(`El UID '${dto.uid_nfc}' ya está registrado`);
     }
 
+    const usuario = await this.usuariosRepository.findOne({
+      where: { id_usuarios: dto.usuario_id },
+    });
+    if (!usuario) {
+      throw new NotFoundException(`Usuario #${dto.usuario_id} no encontrado`);
+    }
+
     const tarjeta = this.tarjetasRepository.create(dto);
     return this.tarjetasRepository.save(tarjeta);
   }
 
   async update(id: number, dto: UpdateTarjetaDto): Promise<Tarjeta> {
-    const tarjeta = await this.findOne(id);
-    Object.assign(tarjeta, dto);
-    return this.tarjetasRepository.save(tarjeta);
+    await this.findOne(id); // lanza 404 si no existe
+    await this.tarjetasRepository.update({ id_tarjeta: id }, dto);
+    return this.findOne(id);
   }
 
   async remove(id: number): Promise<void> {

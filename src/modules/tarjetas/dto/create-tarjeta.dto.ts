@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateTarjetaDto {
   @IsString()
@@ -7,9 +7,9 @@ export class CreateTarjetaDto {
   uid_nfc: string;
 
   @IsInt()
+  @IsNotEmpty()
   @Min(1)
-  @IsOptional()
-  usuario_id?: number;
+  usuario_id: number;
 
   @IsInt()
   @Min(1)
