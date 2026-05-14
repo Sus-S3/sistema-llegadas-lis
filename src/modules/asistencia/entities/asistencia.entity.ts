@@ -46,7 +46,7 @@ export class Asistencia {
   @Column({ name: 'horario_id', type: 'int', nullable: true })
   horario_id!: number | null;
 
-  @ManyToOne(() => Horario, { nullable: true, eager: false })
+  @ManyToOne(() => Horario, { nullable: true, eager: false, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'horario_id' })
   horario!: Horario | null;
 
