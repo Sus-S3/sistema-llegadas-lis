@@ -29,12 +29,12 @@ export class Reemplazo {
   @JoinColumn({ name: 'reemplazante_id' })
   reemplazante!: Usuario;
 
-  @Column({ name: 'horario_id', type: 'int' })
-  horario_id!: number;
+  @Column({ name: 'horario_id', type: 'int', nullable: true })
+  horario_id!: number | null;
 
-  @ManyToOne(() => Horario, { nullable: false, eager: false, onDelete: 'RESTRICT' })
+  @ManyToOne(() => Horario, { nullable: true, eager: false, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'horario_id' })
-  horario!: Horario;
+  horario!: Horario | null;
 
   @Column({ type: 'text' })
   motivo!: string;
