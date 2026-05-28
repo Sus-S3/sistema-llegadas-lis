@@ -109,6 +109,8 @@ export class ReemplazosService {
 
     // Si se aprueba, reasignar el horario al reemplazante
     if (nuevoEstado.nombre === 'Aprobado') {
+      // TODO: quitar log temporal
+      console.log('[DEBUG revisar] horariosRepo.update filtro:', { id_horarios: reemplazo.horario_id }, 'valores:', { usuario_id: reemplazo.reemplazante_id });
       await this.horariosRepo.update(
         { id_horarios: reemplazo.horario_id },
         { usuario_id: reemplazo.reemplazante_id },
