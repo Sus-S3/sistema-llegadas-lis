@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { RolesService } from '../roles/roles.service';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { AuthResponseDto } from './dto/auth-response.dto';
@@ -18,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly usuariosService: UsuariosService,
     private readonly jwtService: JwtService,
+    private readonly rolesService: RolesService,
   ) {}
 
   async validateGoogleUser(profile: GoogleProfile): Promise<Usuario> {
@@ -39,11 +41,16 @@ export class AuthService {
       } else {
         this.logger.log(`[4] Usuario nuevo — llamando usuariosService.create()`);
         try {
+          const rolDefault = await this.rolesService.findByNombre('Auxiliar administrativo');
+          if (!rolDefault) {
+            throw new InternalServerErrorException('Rol "Auxiliar administrativo" no encontrado en la base de datos');
+          }
+
           usuario = await this.usuariosService.create({
             nombre: profile.nombre,
             correo: profile.correo,
             google_sub: profile.google_sub,
-            rol_id: 2,
+            rol_id: rolDefault.id_roles,
             estado_id: 1,
           });
           this.logger.log(`[5] Usuario creado exitosamente — id=${usuario.id_usuarios}`);
