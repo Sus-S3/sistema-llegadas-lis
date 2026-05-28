@@ -19,7 +19,7 @@ import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { UsuariosService } from './usuarios.service';
 
 // rol_id 3 = Administrador (según seed: Auxiliar admin=1, Auxiliar prog=2, Administrador=3)
-const ADMIN = 3;
+const ADMIN = 6;
 
 @UseGuards(JwtAuthGuard)
 @Controller('usuarios')
