@@ -7,9 +7,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Estado } from '../laboratorios/entities/estado.entity';
+import { Rol } from '../roles/entities/rol.entity';
 import { Tarjeta } from '../tarjetas/entities/tarjeta.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { HorariosService } from '../horarios/horarios.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { MarcarAsistenciaDto } from './dto/marcar-asistencia.dto';
 import { Asistencia } from './entities/asistencia.entity';
 
@@ -36,7 +38,10 @@ export class AsistenciaService {
     private readonly usuariosRepository: Repository<Usuario>,
     @InjectRepository(Estado)
     private readonly estadosRepository: Repository<Estado>,
+    @InjectRepository(Rol)
+    private readonly rolesRepository: Repository<Rol>,
     private readonly horariosService: HorariosService,
+    private readonly notificacionesService: NotificacionesService,
   ) {}
 
   async marcar(dto: MarcarAsistenciaDto): Promise<{
@@ -125,6 +130,20 @@ export class AsistenciaService {
       `marcar() — usuario: ${tarjeta.usuario.correo}, horario_id: ${horario_id}, clasificacion: ${clasificacion ?? 'sin horario'}`,
     );
 
+    if (clasificacion === 'Tarde' && horario) {
+      const adminEmail = await this.findAdminEmail();
+      if (adminEmail) {
+        void this.notificacionesService.sendAlertaAsistencia(adminEmail, {
+          usuario: tarjeta.usuario.nombre,
+          dia: horario.dia_semana,
+          hora_inicio: horario.hora_inicio,
+          hora_fin: horario.hora_fin,
+          laboratorio: horario.laboratorio?.nombre ?? 'N/A',
+          tipo: 'tarde',
+        });
+      }
+    }
+
     return {
       mensaje: 'Asistencia registrada',
       ya_registrado: false,
@@ -132,6 +151,13 @@ export class AsistenciaService {
       fecha_hora,
       clasificacion,
     };
+  }
+
+  async findAdminEmail(): Promise<string | null> {
+    const rol = await this.rolesRepository.findOne({ where: { nombre: 'Administrador' } });
+    if (!rol) return null;
+    const admin = await this.usuariosRepository.findOne({ where: { rol_id: rol.id_roles } });
+    return admin?.correo ?? null;
   }
 
   findAll(usuarioId?: number, fecha?: string): Promise<Asistencia[]> {

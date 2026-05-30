@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import databaseConfig from './config/database.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -14,6 +15,7 @@ import { LaboratoriosModule } from './modules/laboratorios/laboratorios.module';
 import { HorariosModule } from './modules/horarios/horarios.module';
 import { JustificacionesModule } from './modules/justificaciones/justificaciones.module';
 import { ReemplazosModule } from './modules/reemplazos/reemplazos.module';
+import { ReportesModule } from './modules/reportes/reportes.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { TarjetasModule } from './modules/tarjetas/tarjetas.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -21,6 +23,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [databaseConfig] }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -40,6 +43,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
     HorariosModule,
     JustificacionesModule,
     ReemplazosModule,
+    ReportesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

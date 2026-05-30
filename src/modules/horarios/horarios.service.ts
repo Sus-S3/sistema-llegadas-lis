@@ -37,6 +37,7 @@ export class HorariosService {
     return this.horariosRepository
       .createQueryBuilder('h')
       .leftJoinAndSelect('h.estado', 'e')
+      .leftJoinAndSelect('h.laboratorio', 'l')
       .where('h.usuario_id = :usuario_id', { usuario_id })
       .andWhere('h.dia_semana = :dia_semana', { dia_semana })
       .andWhere("LOWER(e.nombre) = 'activo'")

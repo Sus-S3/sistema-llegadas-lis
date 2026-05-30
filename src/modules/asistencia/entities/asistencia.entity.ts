@@ -16,12 +16,12 @@ export class Asistencia {
   @PrimaryGeneratedColumn({ name: 'id_asistencia' })
   id_asistencia!: number;
 
-  @Column({ name: 'tarjeta_id', type: 'int' })
-  tarjeta_id!: number;
+  @Column({ name: 'tarjeta_id', type: 'int', nullable: true })
+  tarjeta_id!: number | null;
 
-  @ManyToOne(() => Tarjeta, { nullable: false, eager: false })
+  @ManyToOne(() => Tarjeta, { nullable: true, eager: false })
   @JoinColumn({ name: 'tarjeta_id' })
-  tarjeta!: Tarjeta;
+  tarjeta!: Tarjeta | null;
 
   @Column({ name: 'usuario_id', type: 'int' })
   usuario_id!: number;
