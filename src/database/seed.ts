@@ -121,8 +121,6 @@ async function seedUsuarios(
 // Cambiar a 20 para probar clasificación "Tarde"
 const MINUTOS_ANTES_DE_AHORA = 5;
 
-const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
-
 function formatHora(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
@@ -153,7 +151,8 @@ async function seedHorarios(
     return;
   }
 
-  const diaSemana = DIAS_SEMANA[new Date().getDay()];
+  // getDay(): 0=Dom, 1-6=Lun-Sáb. Si es domingo usamos 1 (lunes) como fallback de prueba.
+  const diaSemana = new Date().getDay() || 1;
   const horaInicio = new Date(Date.now() - MINUTOS_ANTES_DE_AHORA * 60 * 1000);
   const horaFin    = new Date(horaInicio.getTime() + 4 * 60 * 60 * 1000);
 

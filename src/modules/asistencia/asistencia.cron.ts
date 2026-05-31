@@ -10,8 +10,12 @@ import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { Asistencia } from './entities/asistencia.entity';
 import { AsistenciaService } from './asistencia.service';
 
-const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
 const TZ = 'America/Bogota';
+
+const NOMBRE_DIA: Record<number, string> = {
+  1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
+  4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
+};
 
 function minutosLocales(date: Date): number {
   const local = new Date(date.toLocaleString('en-US', { timeZone: TZ }));
@@ -37,7 +41,7 @@ export class AsistenciaCron {
   async revisarAusentes(): Promise<void> {
     try {
       const ahora = new Date();
-      const diaSemana = DIAS_SEMANA[new Date(ahora.toLocaleString('en-US', { timeZone: TZ })).getDay()];
+      const diaSemana = new Date(ahora.toLocaleString('en-US', { timeZone: TZ })).getDay();
       const minutosAhora = minutosLocales(ahora);
 
       // Todos los horarios activos del día de hoy
@@ -94,7 +98,7 @@ export class AsistenciaCron {
         if (adminEmail) {
           void this.notificacionesService.sendAlertaAsistencia(adminEmail, {
             usuario: horario.usuario?.nombre ?? `Usuario #${horario.usuario_id}`,
-            dia: horario.dia_semana,
+            dia: NOMBRE_DIA[horario.dia_semana] ?? String(horario.dia_semana),
             hora_inicio: horario.hora_inicio,
             hora_fin: horario.hora_fin,
             laboratorio: horario.laboratorio?.nombre ?? 'N/A',

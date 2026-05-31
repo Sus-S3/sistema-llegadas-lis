@@ -33,7 +33,7 @@ export class HorariosService {
    * Devuelve el horario activo de un usuario para un día dado.
    * Usado por AsistenciaService para clasificar la llegada.
    */
-  findHorarioActivo(usuario_id: number, dia_semana: string): Promise<Horario | null> {
+  findHorarioActivo(usuario_id: number, dia_semana: number): Promise<Horario | null> {
     return this.horariosRepository
       .createQueryBuilder('h')
       .leftJoinAndSelect('h.estado', 'e')

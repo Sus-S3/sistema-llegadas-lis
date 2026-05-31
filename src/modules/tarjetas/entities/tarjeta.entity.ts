@@ -32,6 +32,13 @@ export class Tarjeta {
   @JoinColumn({ name: 'estado_id' })
   estado!: Estado;
 
+  @Column({ name: 'registrado_por', type: 'int', nullable: true })
+  registrado_por!: number | null;
+
+  @ManyToOne(() => Usuario, { nullable: true, eager: false, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'registrado_por' })
+  registrador!: Usuario | null;
+
   @CreateDateColumn({ type: 'timestamptz', name: 'creado_en' })
   creado_en!: Date;
 

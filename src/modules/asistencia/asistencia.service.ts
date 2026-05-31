@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Dispositivo } from '../dispositivos/entities/dispositivo.entity';
 import { Estado } from '../laboratorios/entities/estado.entity';
 import { Rol } from '../roles/entities/rol.entity';
 import { Tarjeta } from '../tarjetas/entities/tarjeta.entity';
@@ -16,8 +17,12 @@ import { MarcarAsistenciaDto } from './dto/marcar-asistencia.dto';
 import { Asistencia } from './entities/asistencia.entity';
 
 const TOLERANCIA_MINUTOS = 10;
-const DIAS_SEMANA = ['DOMINGO', 'LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO'];
 const TZ = 'America/Bogota';
+
+const NOMBRE_DIA: Record<number, string> = {
+  1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
+  4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
+};
 
 /** Devuelve minutos desde medianoche en la zona horaria del proyecto. */
 function minutosLocales(date: Date): number {
@@ -40,6 +45,8 @@ export class AsistenciaService {
     private readonly estadosRepository: Repository<Estado>,
     @InjectRepository(Rol)
     private readonly rolesRepository: Repository<Rol>,
+    @InjectRepository(Dispositivo)
+    private readonly dispositivosRepository: Repository<Dispositivo>,
     private readonly horariosService: HorariosService,
     private readonly notificacionesService: NotificacionesService,
   ) {}
@@ -67,13 +74,12 @@ export class AsistenciaService {
     };
 
     // Resolver horario ANTES del duplicado — la clave de unicidad incluye horario_id
-    const diaSemana = DIAS_SEMANA[new Date().getDay()];
+    // getDay(): 0=Dom, 1=Lun…6=Sáb — coincide con el smallint almacenado (1-6)
+    const diaSemana = new Date(new Date().toLocaleString('en-US', { timeZone: TZ })).getDay();
     const horario = await this.horariosService.findHorarioActivo(tarjeta.usuario_id, diaSemana);
     const horario_id = horario?.id_horarios ?? null;
 
     // Duplicado: usuario + horario + fecha de hoy
-    // Si hay horario: permite registrar una vez por cada horario distinto del día
-    // Si no hay horario: permite un único registro diario (horario_id IS NULL)
     const duplicadoQb = this.asistenciaRepository
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.estado', 'e')
@@ -102,12 +108,13 @@ export class AsistenciaService {
     // Clasificar según diferencia con hora_inicio del horario
     let estado_id: number | null = null;
     let clasificacion: string | null = null;
+    let tardanza: number | null = null;
 
     if (horario) {
       const minutosAhora = minutosLocales(new Date());
       const [hh, mm] = horario.hora_inicio.split(':').map(Number);
       const minutosEsperados = hh * 60 + mm;
-      const tardanza = minutosAhora - minutosEsperados;
+      tardanza = minutosAhora - minutosEsperados;
 
       const nombreEstado = tardanza <= TOLERANCIA_MINUTOS ? 'A tiempo' : 'Tarde';
       const estado = await this.estadosRepository.findOne({ where: { nombre: nombreEstado } });
@@ -115,14 +122,27 @@ export class AsistenciaService {
       clasificacion = nombreEstado;
     }
 
+    // Buscar dispositivo del laboratorio asociado al horario
+    let dispositivo_id: number | null = null;
+    if (horario?.laboratorio_id) {
+      const dispositivo = await this.dispositivosRepository.findOne({
+        where: { laboratorio_id: horario.laboratorio_id },
+      });
+      dispositivo_id = dispositivo?.id_dispositivos ?? null;
+    }
+
     const fecha_hora = new Date();
     const asistencia = this.asistenciaRepository.create({
       tarjeta_id: tarjeta.id_tarjeta,
+      tarjeta_nfc_id: tarjeta.id_tarjeta,
       usuario_id: tarjeta.usuario_id,
+      dispositivo_id,
       fecha_hora,
       tipo: 'entrada',
       estado_id,
       horario_id,
+      hora_entrada_esperada: horario?.hora_inicio ?? null,
+      minutos_diferencia: tardanza,
     });
     await this.asistenciaRepository.save(asistencia);
 
@@ -135,7 +155,7 @@ export class AsistenciaService {
       if (adminEmail) {
         void this.notificacionesService.sendAlertaAsistencia(adminEmail, {
           usuario: tarjeta.usuario.nombre,
-          dia: horario.dia_semana,
+          dia: NOMBRE_DIA[horario.dia_semana] ?? String(horario.dia_semana),
           hora_inicio: horario.hora_inicio,
           hora_fin: horario.hora_fin,
           laboratorio: horario.laboratorio?.nombre ?? 'N/A',

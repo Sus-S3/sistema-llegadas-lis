@@ -80,7 +80,12 @@ export class TarjetasService {
       throw new NotFoundException(`Usuario #${dto.usuario_id} no encontrado`);
     }
 
-    const tarjeta = this.tarjetasRepository.create(dto);
+    const tarjeta = this.tarjetasRepository.create({
+      uid_nfc: dto.uid_nfc,
+      usuario_id: dto.usuario_id,
+      estado_id: dto.estado_id,
+      registrado_por: dto.registrado_por_id ?? null,
+    });
     return this.tarjetasRepository.save(tarjeta);
   }
 

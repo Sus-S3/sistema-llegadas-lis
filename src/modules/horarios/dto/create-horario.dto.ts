@@ -1,26 +1,19 @@
-import { IsIn, IsNotEmpty, IsNumber, IsString, Matches } from 'class-validator';
-
-export const DIAS_SEMANA = [
-  'LUNES',
-  'MARTES',
-  'MIERCOLES',
-  'JUEVES',
-  'VIERNES',
-  'SABADO',
-  'DOMINGO',
-] as const;
+import { IsInt, IsString, Matches, Max, Min } from 'class-validator';
 
 export class CreateHorarioDto {
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   usuario_id: number;
 
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   laboratorio_id: number;
 
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(DIAS_SEMANA)
-  dia_semana: string;
+  /** 1=Lunes, 2=Martes, 3=Miércoles, 4=Jueves, 5=Viernes, 6=Sábado */
+  @IsInt()
+  @Min(1)
+  @Max(6)
+  dia_semana: number;
 
   @IsString()
   @Matches(/^\d{2}:\d{2}$/, { message: 'hora_inicio debe tener formato HH:MM' })
@@ -30,6 +23,7 @@ export class CreateHorarioDto {
   @Matches(/^\d{2}:\d{2}$/, { message: 'hora_fin debe tener formato HH:MM' })
   hora_fin: string;
 
-  @IsNumber()
+  @IsInt()
+  @Min(1)
   estado_id: number;
 }

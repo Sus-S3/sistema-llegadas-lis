@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class CreateTarjetaDto {
   @IsString()
@@ -14,4 +14,9 @@ export class CreateTarjetaDto {
   @IsInt()
   @Min(1)
   estado_id: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  registrado_por_id?: number;
 }
