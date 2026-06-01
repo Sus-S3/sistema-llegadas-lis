@@ -1,10 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { Estado } from '../laboratorios/entities/estado.entity';
+import { Notificacion } from './entities/notificacion.entity';
+import { NotificacionesController } from './notificaciones.controller';
 import { NotificacionesService } from './notificaciones.service';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([Notificacion, Estado]),
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -23,6 +28,7 @@ import { NotificacionesService } from './notificaciones.service';
       }),
     }),
   ],
+  controllers: [NotificacionesController],
   providers: [NotificacionesService],
   exports: [NotificacionesService],
 })

@@ -149,7 +149,7 @@ export class AsistenciaService {
       hora_entrada_esperada: horario?.hora_inicio ?? null,
       minutos_diferencia: tardanza,
     });
-    await this.asistenciaRepository.save(asistencia);
+    const saved = await this.asistenciaRepository.save(asistencia);
 
     this.logger.log(
       `marcar() — usuario: ${tarjeta.usuario.correo}, horario_id: ${horario_id}, clasificacion: ${clasificacion ?? 'sin horario'}`,
@@ -165,6 +165,7 @@ export class AsistenciaService {
           hora_fin: horario.hora_fin,
           laboratorio: horario.laboratorio?.nombre ?? 'N/A',
           tipo: 'tarde',
+          asistencia_id: saved.id_asistencia,
         });
       }
     }

@@ -14,6 +14,7 @@ import { EstadosModule } from './modules/estados/estados.module';
 import { LaboratoriosModule } from './modules/laboratorios/laboratorios.module';
 import { HorariosModule } from './modules/horarios/horarios.module';
 import { JustificacionesModule } from './modules/justificaciones/justificaciones.module';
+import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 import { ReemplazosModule } from './modules/reemplazos/reemplazos.module';
 import { ReportesModule } from './modules/reportes/reportes.module';
 import { RolesModule } from './modules/roles/roles.module';
@@ -42,6 +43,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
     AsistenciaModule,
     HorariosModule,
     JustificacionesModule,
+    NotificacionesModule,
     ReemplazosModule,
     ReportesModule,
   ],

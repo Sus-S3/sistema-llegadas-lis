@@ -79,7 +79,7 @@ export class AsistenciaCron {
 
         if (existente) continue;
 
-        await this.asistenciaRepo.save(
+        const savedAusente = await this.asistenciaRepo.save(
           this.asistenciaRepo.create({
             tarjeta_id: null,
             usuario_id: horario.usuario_id,
@@ -102,6 +102,7 @@ export class AsistenciaCron {
             hora_fin: horario.hora_fin,
             laboratorio: horario.laboratorio?.nombre ?? 'N/A',
             tipo: 'ausente',
+            asistencia_id: savedAusente.id_asistencia,
           });
         }
       }
