@@ -3,6 +3,7 @@ import { CategoriaEstado } from '../modules/estados/entities/categoria-estado.en
 import { Horario } from '../modules/horarios/entities/horario.entity';
 import { Estado } from '../modules/laboratorios/entities/estado.entity';
 import { Laboratorio } from '../modules/laboratorios/entities/laboratorio.entity';
+import { FormatoExportacion } from '../modules/reportes/entities/formato-exportacion.entity';
 import { Rol } from '../modules/roles/entities/rol.entity';
 import { Usuario } from '../modules/usuarios/entities/usuario.entity';
 
@@ -180,6 +181,24 @@ async function seedHorarios(
 
 // ─── función exportada ────────────────────────────────────────────────────────
 
+async function seedFormatos(repo: Repository<FormatoExportacion>): Promise<void> {
+  console.log('[Seed] Formatos de exportación');
+
+  const formatos = [
+    { nombre: 'PDF',   descripcion: 'Reporte en formato PDF' },
+    { nombre: 'EXCEL', descripcion: 'Reporte en formato Excel' },
+    { nombre: 'CSV',   descripcion: 'Reporte en formato CSV' },
+  ];
+
+  for (const f of formatos) {
+    const existe = await repo.findOne({ where: { nombre: f.nombre } });
+    if (!existe) {
+      await repo.save(repo.create(f));
+      console.log(`[Seed]   ✓ ${f.nombre}`);
+    }
+  }
+}
+
 export async function runSeed(dataSource: DataSource): Promise<void> {
   const categoriaRepo   = dataSource.getRepository(CategoriaEstado);
   const estadoRepo      = dataSource.getRepository(Estado);
@@ -187,6 +206,7 @@ export async function runSeed(dataSource: DataSource): Promise<void> {
   const usuarioRepo     = dataSource.getRepository(Usuario);
   const laboratorioRepo = dataSource.getRepository(Laboratorio);
   const horarioRepo     = dataSource.getRepository(Horario);
+  const formatoRepo     = dataSource.getRepository(FormatoExportacion);
 
   const idMap = await seedCategorias(categoriaRepo);
   await seedEstados(estadoRepo, idMap);
@@ -197,6 +217,7 @@ export async function runSeed(dataSource: DataSource): Promise<void> {
   const rolMap = await seedRoles(rolRepo, estadoActivo.id_estados);
   await seedUsuarios(usuarioRepo, rolMap);
   await seedHorarios(horarioRepo, usuarioRepo, laboratorioRepo, estadoRepo);
+  await seedFormatos(formatoRepo);
 
   console.log('[Seed] ✅ Completado');
 }

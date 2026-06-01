@@ -7,6 +7,7 @@ import { CategoriaEstado } from '../modules/estados/entities/categoria-estado.en
 import { Horario } from '../modules/horarios/entities/horario.entity';
 import { Estado } from '../modules/laboratorios/entities/estado.entity';
 import { Laboratorio } from '../modules/laboratorios/entities/laboratorio.entity';
+import { FormatoExportacion } from '../modules/reportes/entities/formato-exportacion.entity';
 import { Rol } from '../modules/roles/entities/rol.entity';
 import { Usuario } from '../modules/usuarios/entities/usuario.entity';
 import { runSeed } from './seed';
@@ -18,7 +19,7 @@ const CliDataSource = new DataSource({
   username: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  entities: [CategoriaEstado, Estado, Laboratorio, Rol, Usuario, Horario],
+  entities: [CategoriaEstado, Estado, Laboratorio, Rol, Usuario, Horario, FormatoExportacion],
   synchronize: false,
   ssl: process.env.DB_HOST && !process.env.DB_HOST.includes('localhost')
     ? { rejectUnauthorized: false }

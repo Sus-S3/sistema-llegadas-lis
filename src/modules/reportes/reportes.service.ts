@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFDocument = require('pdfkit') as typeof import('pdfkit');
 import { Asistencia } from '../asistencia/entities/asistencia.entity';
+import { Usuario } from '../usuarios/entities/usuario.entity';
+import { ExportacionReporte } from './entities/exportacion-reporte.entity';
+import { FormatoExportacion } from './entities/formato-exportacion.entity';
 
 const TZ = 'America/Bogota';
 
@@ -16,9 +19,17 @@ export interface ReporteFilters {
 
 @Injectable()
 export class ReportesService {
+  private readonly logger = new Logger(ReportesService.name);
+
   constructor(
     @InjectRepository(Asistencia)
     private readonly asistenciaRepo: Repository<Asistencia>,
+    @InjectRepository(ExportacionReporte)
+    private readonly exportacionRepo: Repository<ExportacionReporte>,
+    @InjectRepository(FormatoExportacion)
+    private readonly formatoRepo: Repository<FormatoExportacion>,
+    @InjectRepository(Usuario)
+    private readonly usuariosRepo: Repository<Usuario>,
   ) {}
 
   private async getRegistros(filters: ReporteFilters): Promise<Asistencia[]> {
@@ -56,7 +67,33 @@ export class ReportesService {
     };
   }
 
-  async generateExcel(filters: ReporteFilters): Promise<Buffer> {
+  private async persistirExportacion(
+    generadoPorId: number,
+    nombreFormato: string,
+    filters: ReporteFilters,
+    totalRegistros: number,
+  ): Promise<void> {
+    try {
+      const formato = await this.formatoRepo.findOne({ where: { nombre: nombreFormato } });
+      if (!formato) {
+        this.logger.warn(`persistirExportacion() → formato '${nombreFormato}' no encontrado en BD`);
+        return;
+      }
+      await this.exportacionRepo.save(
+        this.exportacionRepo.create({
+          generado_por: generadoPorId,
+          id_formatos_exportacion: formato.id_formatos_exportacion,
+          filtros: JSON.stringify(filters),
+          url_archivo: null,
+          total_registros: totalRegistros,
+        }),
+      );
+    } catch (error) {
+      this.logger.error(`persistirExportacion() → error: ${(error as Error).message}`);
+    }
+  }
+
+  async generateExcel(filters: ReporteFilters, generadoPorId: number): Promise<Buffer> {
     const registros = await this.getRegistros(filters);
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Asistencia');
@@ -71,7 +108,6 @@ export class ReportesService {
       { header: 'Estado',       key: 'estado',      width: 14 },
     ];
 
-    // Estilo encabezado
     sheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1e3a5f' } };
@@ -83,13 +119,17 @@ export class ReportesService {
     }
 
     const raw = await workbook.xlsx.writeBuffer();
-    return Buffer.from(raw);
+    const buffer = Buffer.from(raw);
+
+    void this.persistirExportacion(generadoPorId, 'EXCEL', filters, registros.length);
+
+    return buffer;
   }
 
-  async generatePdf(filters: ReporteFilters): Promise<Buffer> {
+  async generatePdf(filters: ReporteFilters, generadoPorId: number): Promise<Buffer> {
     const registros = await this.getRegistros(filters);
 
-    return new Promise((resolve, reject) => {
+    const buffer = await new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
       const chunks: Buffer[] = [];
 
@@ -97,14 +137,12 @@ export class ReportesService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // Título
       doc.fontSize(16).font('Helvetica-Bold').text('Reporte de Asistencia', { align: 'center' });
       doc.moveDown(0.5);
       doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
         .text(`Generado: ${new Date().toLocaleString('es-CO', { timeZone: TZ })}`, { align: 'center' });
       doc.moveDown(1);
 
-      // Columnas: [ancho, encabezado, key]
       const cols: [number, string, keyof ReturnType<typeof this.formatFila>][] = [
         [140, 'Usuario',      'usuario'],
         [155, 'Correo',       'correo'],
@@ -131,12 +169,10 @@ export class ReportesService {
         }
       };
 
-      // Encabezado
       const headerFila = Object.fromEntries(cols.map(([, h, k]) => [k, h])) as Record<string, string>;
       dibujarFila(headerFila, doc.y, '#1e3a5f');
       doc.moveDown(1.2);
 
-      // Filas de datos
       for (let i = 0; i < registros.length; i++) {
         if (doc.y > 520) {
           doc.addPage({ size: 'A4', layout: 'landscape', margin: 30 });
@@ -149,6 +185,17 @@ export class ReportesService {
       }
 
       doc.end();
+    });
+
+    void this.persistirExportacion(generadoPorId, 'PDF', filters, registros.length);
+
+    return buffer;
+  }
+
+  findAll(): Promise<ExportacionReporte[]> {
+    return this.exportacionRepo.find({
+      relations: ['usuario', 'formato'],
+      order: { generado_en: 'DESC' },
     });
   }
 }

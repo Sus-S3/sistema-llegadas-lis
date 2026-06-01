@@ -2,10 +2,11 @@ import {
   Controller,
   Get,
   Query,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { IsDateString, IsInt, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -33,8 +34,13 @@ export class ReportesController {
   constructor(private readonly reportesService: ReportesService) {}
 
   @Get('asistencia/excel')
-  async downloadExcel(@Query() query: ReporteQueryDto, @Res() res: Response) {
-    const buffer = await this.reportesService.generateExcel(query);
+  async downloadExcel(
+    @Query() query: ReporteQueryDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const generadoPorId = (req.user as { id_usuarios: number }).id_usuarios;
+    const buffer = await this.reportesService.generateExcel(query, generadoPorId);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="asistencia-${Date.now()}.xlsx"`,
@@ -44,13 +50,23 @@ export class ReportesController {
   }
 
   @Get('asistencia/pdf')
-  async downloadPdf(@Query() query: ReporteQueryDto, @Res() res: Response) {
-    const buffer = await this.reportesService.generatePdf(query);
+  async downloadPdf(
+    @Query() query: ReporteQueryDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const generadoPorId = (req.user as { id_usuarios: number }).id_usuarios;
+    const buffer = await this.reportesService.generatePdf(query, generadoPorId);
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="asistencia-${Date.now()}.pdf"`,
       'Content-Length': buffer.length,
     });
     res.end(buffer);
+  }
+
+  @Get('historial')
+  findAll() {
+    return this.reportesService.findAll();
   }
 }
