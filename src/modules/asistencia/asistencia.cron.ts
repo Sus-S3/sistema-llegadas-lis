@@ -35,7 +35,7 @@ export class AsistenciaCron {
     private readonly notificacionesService: NotificacionesService,
   ) {}
 
-  @Cron('*/5 * * * *')
+  @Cron('* * * * *')
   async revisarAusentes(): Promise<void> {
     this.logger.warn(`revisarAusentes() ejecutado — ${new Date().toISOString()}`);
     try {
