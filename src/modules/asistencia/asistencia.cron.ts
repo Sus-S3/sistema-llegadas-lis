@@ -22,7 +22,7 @@ function minutosLocales(date: Date): number {
 
 @Injectable()
 export class AsistenciaCron {
-  private readonly logger = new Logger(AsistenciaCron.name);
+  private readonly logger = new Logger('AsistenciaCron');
 
   constructor(
     @InjectRepository(Asistencia)
@@ -37,7 +37,7 @@ export class AsistenciaCron {
 
   @Cron('*/5 * * * *')
   async revisarAusentes(): Promise<void> {
-    console.log(`[AsistenciaCron] revisarAusentes() ejecutado — ${new Date().toISOString()}`);
+    this.logger.warn(`revisarAusentes() ejecutado — ${new Date().toISOString()}`);
     try {
       const ahora = new Date();
       const diaSemana = new Date(ahora.toLocaleString('en-US', { timeZone: TZ })).getDay();
