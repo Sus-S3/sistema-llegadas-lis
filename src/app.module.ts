@@ -7,6 +7,7 @@ import databaseConfig from './config/database.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { ArchivosModule } from './modules/archivos/archivos.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AsistenciaModule } from './modules/asistencia/asistencia.module';
 import { DispositivosModule } from './modules/dispositivos/dispositivos.module';
@@ -33,6 +34,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
         autoLoadEntities: true,
       }),
     }),
+    ArchivosModule,
     AuthModule,
     UsuariosModule,
     LaboratoriosModule,
