@@ -21,6 +21,7 @@ import { NotificacionesService } from './notificaciones.service';
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
+          family: 4,
         },
         defaults: {
           from: config.get<string>('MAIL_FROM', '"Sistema LIS" <noreply@example.com>'),
