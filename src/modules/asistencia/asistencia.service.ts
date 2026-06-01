@@ -75,8 +75,14 @@ export class AsistenciaService {
 
     // Resolver horario ANTES del duplicado — la clave de unicidad incluye horario_id
     // getDay(): 0=Dom, 1=Lun…6=Sáb — coincide con el smallint almacenado (1-6)
-    const diaSemana = new Date(new Date().toLocaleString('en-US', { timeZone: TZ })).getDay();
-    const horario = await this.horariosService.findHorarioActivo(tarjeta.usuario_id, diaSemana);
+    const ahoraBogota = new Date(new Date().toLocaleString('en-US', { timeZone: TZ }));
+    const diaSemana = ahoraBogota.getDay();
+    const minutosAhora = ahoraBogota.getHours() * 60 + ahoraBogota.getMinutes();
+    const horario = await this.horariosService.findHorarioActivo(
+      tarjeta.usuario_id,
+      diaSemana,
+      minutosAhora,
+    );
     const horario_id = horario?.id_horarios ?? null;
 
     // Duplicado: usuario + horario + fecha de hoy
@@ -111,7 +117,6 @@ export class AsistenciaService {
     let tardanza: number | null = null;
 
     if (horario) {
-      const minutosAhora = minutosLocales(new Date());
       const [hh, mm] = horario.hora_inicio.split(':').map(Number);
       const minutosEsperados = hh * 60 + mm;
       tardanza = minutosAhora - minutosEsperados;

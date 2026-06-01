@@ -4,8 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Horario } from '../horarios/entities/horario.entity';
 import { Estado } from '../laboratorios/entities/estado.entity';
-import { Rol } from '../roles/entities/rol.entity';
-import { Usuario } from '../usuarios/entities/usuario.entity';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { Asistencia } from './entities/asistencia.entity';
 import { AsistenciaService } from './asistencia.service';
@@ -39,6 +37,7 @@ export class AsistenciaCron {
 
   @Cron('*/5 * * * *')
   async revisarAusentes(): Promise<void> {
+    console.log(`[AsistenciaCron] revisarAusentes() ejecutado — ${new Date().toISOString()}`);
     try {
       const ahora = new Date();
       const diaSemana = new Date(ahora.toLocaleString('en-US', { timeZone: TZ })).getDay();

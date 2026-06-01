@@ -30,18 +30,51 @@ export class HorariosService {
   }
 
   /**
-   * Devuelve el horario activo de un usuario para un día dado.
-   * Usado por AsistenciaService para clasificar la llegada.
+   * Devuelve el horario activo de un usuario para un día y hora dados.
+   * Prioriza el turno cuya ventana [hora_inicio - 30min, hora_fin + 30min]
+   * contiene la hora actual, permitiendo múltiples turnos por día.
+   * Si ningún turno está en ventana, devuelve el más cercano por hora_inicio.
    */
-  findHorarioActivo(usuario_id: number, dia_semana: number): Promise<Horario | null> {
-    return this.horariosRepository
+  async findHorarioActivo(
+    usuario_id: number,
+    dia_semana: number,
+    minutosActuales?: number,
+  ): Promise<Horario | null> {
+    const horarios = await this.horariosRepository
       .createQueryBuilder('h')
       .leftJoinAndSelect('h.estado', 'e')
       .leftJoinAndSelect('h.laboratorio', 'l')
       .where('h.usuario_id = :usuario_id', { usuario_id })
       .andWhere('h.dia_semana = :dia_semana', { dia_semana })
       .andWhere("LOWER(e.nombre) = 'activo'")
-      .getOne();
+      .getMany();
+
+    if (horarios.length === 0) return null;
+    if (horarios.length === 1) return horarios[0];
+
+    if (minutosActuales === undefined) return horarios[0];
+
+    const MARGEN = 30;
+
+    // Prioridad 1: turno cuya ventana cubre la hora actual
+    const enVentana = horarios.find((h) => {
+      const [hiH, hiM] = h.hora_inicio.split(':').map(Number);
+      const [hfH, hfM] = h.hora_fin.split(':').map(Number);
+      return (
+        minutosActuales >= hiH * 60 + hiM - MARGEN &&
+        minutosActuales <= hfH * 60 + hfM + MARGEN
+      );
+    });
+    if (enVentana) return enVentana;
+
+    // Prioridad 2: turno con hora_inicio más próxima a la hora actual
+    return horarios.reduce((prev, curr) => {
+      const [ph, pm] = prev.hora_inicio.split(':').map(Number);
+      const [ch, cm] = curr.hora_inicio.split(':').map(Number);
+      const distPrev = Math.abs(ph * 60 + pm - minutosActuales);
+      const distCurr = Math.abs(ch * 60 + cm - minutosActuales);
+      return distCurr < distPrev ? curr : prev;
+    });
   }
 
   async findOne(id: number): Promise<Horario> {
