@@ -180,6 +180,7 @@ export class AsistenciaService {
   }
 
   async findAdminEmail(): Promise<string | null> {
+    if (process.env.ADMIN_EMAIL) return process.env.ADMIN_EMAIL;
     const rol = await this.rolesRepository.findOne({ where: { nombre: 'Administrador' } });
     if (!rol) return null;
     const admin = await this.usuariosRepository.findOne({ where: { rol_id: rol.id_roles } });
