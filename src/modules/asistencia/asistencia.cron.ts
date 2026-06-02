@@ -40,8 +40,11 @@ export class AsistenciaCron {
     this.logger.warn(`revisarAusentes() ejecutado — ${new Date().toISOString()}`);
     try {
       const ahora = new Date();
-      const diaSemana = new Date(ahora.toLocaleString('en-US', { timeZone: TZ })).getDay();
+      const ahoraLocal = new Date(ahora.toLocaleString('en-US', { timeZone: TZ }));
+      const diaSemana = ahoraLocal.getDay();
       const minutosAhora = minutosLocales(ahora);
+      // Fecha de hoy en Bogota como 'YYYY-MM-DD' para comparar contra fecha_hora AT TIME ZONE
+      const hoyBogota = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(ahora);
 
       // Todos los horarios activos del día de hoy
       const horariosHoy = await this.horariosRepo
@@ -74,7 +77,10 @@ export class AsistenciaCron {
           .createQueryBuilder('a')
           .where('a.usuario_id = :uid', { uid: horario.usuario_id })
           .andWhere('a.horario_id = :hid', { hid: horario.id_horarios })
-          .andWhere('DATE(a.fecha_hora) = CURRENT_DATE')
+          .andWhere(
+            "DATE(a.fecha_hora AT TIME ZONE 'America/Bogota') = :hoy",
+            { hoy: hoyBogota },
+          )
           .getOne();
 
         if (existente) continue;
