@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { MailerService } from '@nestjs-modules/mailer';
+import { Resend } from 'resend';
 import { Estado } from '../laboratorios/entities/estado.entity';
 import { Notificacion } from './entities/notificacion.entity';
 
@@ -23,9 +23,9 @@ const TIPO_MAP: Record<'tarde' | 'ausente', string> = {
 @Injectable()
 export class NotificacionesService {
   private readonly logger = new Logger(NotificacionesService.name);
+  private readonly resend = new Resend(process.env.RESEND_API_KEY);
 
   constructor(
-    private readonly mailerService: MailerService,
     @InjectRepository(Notificacion)
     private readonly notificacionesRepo: Repository<Notificacion>,
     @InjectRepository(Estado)
@@ -54,39 +54,46 @@ export class NotificacionesService {
       this.findEstadoNotificacion('Fallida'),
     ]);
 
+    const html = `
+      <div style="font-family: sans-serif; max-width: 580px; padding: 24px;">
+        <h2 style="color: ${tipoColor}; margin-top: 0;">
+          Alerta de Asistencia: ${tipoLabel}
+        </h2>
+        <table style="width:100%; border-collapse: collapse; font-size: 14px;">
+          <tr style="background:#f9fafb;">
+            <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600; width:140px;">Auxiliar</td>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.usuario}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Laboratorio</td>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.laboratorio}</td>
+          </tr>
+          <tr style="background:#f9fafb;">
+            <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Día</td>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.dia}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Horario</td>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.hora_inicio} – ${datos.hora_fin}</td>
+          </tr>
+        </table>
+        <p style="color:#9ca3af; font-size:12px; margin-top:20px;">
+          Sistema de Llegadas LIS · Generado automáticamente
+        </p>
+      </div>
+    `;
+
     try {
-      await this.mailerService.sendMail({
+      const { error } = await this.resend.emails.send({
+        from: process.env.MAIL_FROM ?? 'Sistema LIS <noreply@resend.dev>',
         to: adminEmail,
         subject: asunto,
-        html: `
-          <div style="font-family: sans-serif; max-width: 580px; padding: 24px;">
-            <h2 style="color: ${tipoColor}; margin-top: 0;">
-              Alerta de Asistencia: ${tipoLabel}
-            </h2>
-            <table style="width:100%; border-collapse: collapse; font-size: 14px;">
-              <tr style="background:#f9fafb;">
-                <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600; width:140px;">Auxiliar</td>
-                <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.usuario}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Laboratorio</td>
-                <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.laboratorio}</td>
-              </tr>
-              <tr style="background:#f9fafb;">
-                <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Día</td>
-                <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.dia}</td>
-              </tr>
-              <tr>
-                <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Horario</td>
-                <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.hora_inicio} – ${datos.hora_fin}</td>
-              </tr>
-            </table>
-            <p style="color:#9ca3af; font-size:12px; margin-top:20px;">
-              Sistema de Llegadas LIS · Generado automáticamente
-            </p>
-          </div>
-        `,
+        html,
       });
+
+      if (error) {
+        throw new Error(`Resend error: ${JSON.stringify(error)}`);
+      }
 
       if (estadoEnviada) {
         await this.notificacionesRepo.save(
@@ -105,9 +112,8 @@ export class NotificacionesService {
       );
     } catch (error) {
       this.logger.error(
-        `sendAlertaAsistencia() → error al enviar correo a ${adminEmail}: ${(error as Error).message}`,
+        `sendAlertaAsistencia() → error completo: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`,
       );
-      this.logger.error('Error SMTP completo:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
       if (estadoFallida) {
         await this.notificacionesRepo.save(
