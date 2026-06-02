@@ -166,6 +166,7 @@ export class AsistenciaService {
           laboratorio: horario.laboratorio?.nombre ?? 'N/A',
           tipo: 'tarde',
           asistencia_id: saved.id_asistencia,
+          fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
         });
       }
     }

@@ -110,6 +110,7 @@ export class AsistenciaCron {
             laboratorio: horario.laboratorio?.nombre ?? 'N/A',
             tipo: 'ausente',
             asistencia_id: savedAusente.id_asistencia,
+            fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
           });
           this.logger.warn(`[CRON] sendAlertaAsistencia llamado para asistencia #${savedAusente.id_asistencia}`);
         }

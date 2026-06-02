@@ -1,13 +1,12 @@
 import {
   ConflictException,
-  HttpException,
-  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Estado } from '../laboratorios/entities/estado.entity';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { Usuario } from './entities/usuario.entity';
@@ -19,6 +18,8 @@ export class UsuariosService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuariosRepository: Repository<Usuario>,
+    @InjectRepository(Estado)
+    private readonly estadosRepository: Repository<Estado>,
   ) {}
 
   async create(dto: CreateUsuarioDto): Promise<Usuario> {
@@ -46,7 +47,7 @@ export class UsuariosService {
   }
 
   findAll(): Promise<Usuario[]> {
-    return this.usuariosRepository.find();
+    return this.usuariosRepository.find({ relations: ['estado'] });
   }
 
   async findOne(id: number): Promise<Usuario> {
@@ -71,18 +72,22 @@ export class UsuariosService {
     return this.usuariosRepository.save(usuario);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ message: string }> {
     const usuario = await this.findOne(id);
-    try {
-      await this.usuariosRepository.remove(usuario);
-    } catch (error) {
-      if ((error as { code?: string }).code === '23503') {
-        throw new HttpException(
-          'No se puede eliminar el usuario porque tiene registros asociados (asistencia, horarios, tarjetas, etc.)',
-          HttpStatus.CONFLICT,
-        );
-      }
-      throw error;
+
+    const estadoInactivo = await this.estadosRepository
+      .createQueryBuilder('e')
+      .innerJoin('tbl_categorias_estado', 'c', 'c.id_categorias_estado = e.categoria_estado_id')
+      .where('e.nombre = :nombre', { nombre: 'Inactivo' })
+      .andWhere("c.nombre = 'GENERAL'")
+      .getOne();
+
+    if (!estadoInactivo) {
+      throw new NotFoundException('Estado "Inactivo" no encontrado en la base de datos');
     }
+
+    await this.usuariosRepository.update({ id_usuarios: id }, { estado_id: estadoInactivo.id_estados });
+
+    return { message: 'Usuario desactivado correctamente' };
   }
 }

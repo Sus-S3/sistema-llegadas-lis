@@ -2,9 +2,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Estado } from '../../laboratorios/entities/estado.entity';
 
 @Entity('tbl_usuarios')
 export class Usuario {
@@ -25,6 +28,10 @@ export class Usuario {
 
   @Column({ type: 'int' })
   estado_id: number;
+
+  @ManyToOne(() => Estado, { nullable: false, eager: false })
+  @JoinColumn({ name: 'estado_id' })
+  estado!: Estado;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'creado_en' })
   creado_en: Date;

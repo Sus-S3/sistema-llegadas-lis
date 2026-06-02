@@ -13,6 +13,7 @@ export interface AlertaAsistenciaDatos {
   laboratorio: string;
   tipo: 'tarde' | 'ausente';
   asistencia_id: number;
+  fecha?: string;
 }
 
 const TIPO_MAP: Record<'tarde' | 'ausente', string> = {
@@ -71,6 +72,10 @@ export class NotificacionesService {
           <tr style="background:#f9fafb;">
             <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Día</td>
             <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.dia}</td>
+          </tr>
+          <tr style="background:#f9fafb;">
+            <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Fecha</td>
+            <td style="padding:10px 12px; border:1px solid #e5e7eb;">${datos.fecha ?? ''}</td>
           </tr>
           <tr>
             <td style="padding:10px 12px; border:1px solid #e5e7eb; font-weight:600;">Horario</td>
