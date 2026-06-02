@@ -16,7 +16,7 @@ import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { MarcarAsistenciaDto } from './dto/marcar-asistencia.dto';
 import { Asistencia } from './entities/asistencia.entity';
 
-const TOLERANCIA_MINUTOS = 10;
+const TOLERANCIA_MINUTOS = 20;
 const TZ = 'America/Bogota';
 
 const NOMBRE_DIA: Record<number, string> = {

@@ -23,12 +23,19 @@ export class Notificacion {
   @Column({ type: 'varchar', length: 300 })
   asunto!: string;
 
-  @Column({ name: 'asistencia_id', type: 'int' })
-  asistencia_id!: number;
+  @Column({ name: 'asistencia_id', type: 'int', nullable: true })
+  asistencia_id!: number | null;
 
-  @ManyToOne(() => Asistencia, { nullable: false, eager: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => Asistencia, { nullable: true, eager: false, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'asistencia_id' })
-  asistencia!: Asistencia;
+  asistencia!: Asistencia | null;
+
+  // Columnas para deduplicar alertas de tardanza (cuando aún no hay registro de asistencia)
+  @Column({ name: 'horario_id', type: 'int', nullable: true })
+  horario_id!: number | null;
+
+  @Column({ name: 'usuario_id', type: 'int', nullable: true })
+  usuario_id!: number | null;
 
   @Column({ name: 'estado_id', type: 'int' })
   estado_id!: number;

@@ -9,6 +9,7 @@ import { Asistencia } from './entities/asistencia.entity';
 import { AsistenciaService } from './asistencia.service';
 
 const TZ = 'America/Bogota';
+const TOLERANCIA_TARDANZA_MIN = 20;
 
 const NOMBRE_DIA: Record<number, string> = {
   1: 'Lunes', 2: 'Martes', 3: 'Miércoles',
@@ -43,10 +44,11 @@ export class AsistenciaCron {
       const ahoraLocal = new Date(ahora.toLocaleString('en-US', { timeZone: TZ }));
       const diaSemana = ahoraLocal.getDay();
       const minutosAhora = minutosLocales(ahora);
-      // Fecha de hoy en Bogota como 'YYYY-MM-DD' para comparar contra fecha_hora AT TIME ZONE
       const hoyBogota = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(ahora);
+      const fechaLegible = ahora.toLocaleDateString('es-CO', {
+        timeZone: TZ, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      });
 
-      // Todos los horarios activos del día de hoy
       const horariosHoy = await this.horariosRepo
         .createQueryBuilder('h')
         .leftJoinAndSelect('h.usuario', 'u')
@@ -56,24 +58,23 @@ export class AsistenciaCron {
         .andWhere("LOWER(e.nombre) = 'activo'")
         .getMany();
 
-      // Solo los que ya terminaron (hora_fin < ahora en Bogota)
-      const terminados = horariosHoy.filter((h) => {
-        const [hh, mm] = h.hora_fin.split(':').map(Number);
-        return hh * 60 + mm < minutosAhora;
-      });
-
-      if (terminados.length === 0) return;
+      if (horariosHoy.length === 0) return;
 
       const estadoAusente = await this.estadosRepo.findOne({ where: { nombre: 'Ausente' } });
       if (!estadoAusente) {
-        this.logger.warn('revisarAusentes() — Estado "Ausente" no encontrado, abortando');
-        return;
+        this.logger.warn('Estado "Ausente" no encontrado — la revisión de ausentes será omitida');
       }
 
       const adminEmail = await this.asistenciaService.findAdminEmail();
 
-      for (const horario of terminados) {
-        const existente = await this.asistenciaRepo
+      for (const horario of horariosHoy) {
+        const [ihh, imm] = horario.hora_inicio.split(':').map(Number);
+        const [fhh, fmm] = horario.hora_fin.split(':').map(Number);
+        const minutosInicio = ihh * 60 + imm;
+        const minutosFin = fhh * 60 + fmm;
+
+        // Verificar si ya existe registro de asistencia para este usuario+horario+hoy
+        const tieneAsistencia = await this.asistenciaRepo
           .createQueryBuilder('a')
           .where('a.usuario_id = :uid', { uid: horario.usuario_id })
           .andWhere('a.horario_id = :hid', { hid: horario.id_horarios })
@@ -83,36 +84,58 @@ export class AsistenciaCron {
           )
           .getOne();
 
-        if (existente) continue;
+        const datosBase = {
+          usuario: horario.usuario?.nombre ?? `Usuario #${horario.usuario_id}`,
+          dia: NOMBRE_DIA[horario.dia_semana] ?? String(horario.dia_semana),
+          hora_inicio: horario.hora_inicio,
+          hora_fin: horario.hora_fin,
+          laboratorio: horario.laboratorio?.nombre ?? 'N/A',
+          fecha: fechaLegible,
+          horario_id: horario.id_horarios,
+          usuario_id: horario.usuario_id,
+        };
 
-        const savedAusente = await this.asistenciaRepo.save(
-          this.asistenciaRepo.create({
-            tarjeta_id: null,
-            usuario_id: horario.usuario_id,
-            fecha_hora: ahora,
-            tipo: 'ausente',
-            estado_id: estadoAusente.id_estados,
-            horario_id: horario.id_horarios,
-          }),
-        );
+        // ── Revisión 1: alerta de tardanza ────────────────────────────────────
+        // Condición: > 20 min desde hora_inicio, antes del fin, sin asistencia
+        if (
+          !tieneAsistencia &&
+          minutosAhora > minutosInicio + TOLERANCIA_TARDANZA_MIN &&
+          minutosAhora < minutosFin
+        ) {
+          if (adminEmail) {
+            void this.notificacionesService.sendAlertaAsistencia(adminEmail, {
+              ...datosBase,
+              tipo: 'tarde',
+            });
+          }
+        }
 
-        this.logger.log(
-          `revisarAusentes() — ausente registrado: usuario #${horario.usuario_id}, horario #${horario.id_horarios}`,
-        );
+        // ── Revisión 2: ausente (turno terminado sin asistencia) ──────────────
+        if (!tieneAsistencia && minutosAhora >= minutosFin && estadoAusente) {
+          const savedAusente = await this.asistenciaRepo.save(
+            this.asistenciaRepo.create({
+              tarjeta_id: null,
+              usuario_id: horario.usuario_id,
+              fecha_hora: ahora,
+              tipo: 'ausente',
+              estado_id: estadoAusente.id_estados,
+              horario_id: horario.id_horarios,
+            }),
+          );
 
-        if (adminEmail) {
-          this.logger.warn(`[CRON] Intentando enviar correo para ausencia id=${savedAusente.id_asistencia} usuario=${horario.usuario?.nombre}`);
-          void this.notificacionesService.sendAlertaAsistencia(adminEmail, {
-            usuario: horario.usuario?.nombre ?? `Usuario #${horario.usuario_id}`,
-            dia: NOMBRE_DIA[horario.dia_semana] ?? String(horario.dia_semana),
-            hora_inicio: horario.hora_inicio,
-            hora_fin: horario.hora_fin,
-            laboratorio: horario.laboratorio?.nombre ?? 'N/A',
-            tipo: 'ausente',
-            asistencia_id: savedAusente.id_asistencia,
-            fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-          });
-          this.logger.warn(`[CRON] sendAlertaAsistencia llamado para asistencia #${savedAusente.id_asistencia}`);
+          this.logger.log(
+            `revisarAusentes() — ausente registrado: usuario #${horario.usuario_id}, horario #${horario.id_horarios}`,
+          );
+
+          if (adminEmail) {
+            this.logger.warn(`[CRON] Enviando correo ausencia id=${savedAusente.id_asistencia} usuario=${horario.usuario?.nombre}`);
+            void this.notificacionesService.sendAlertaAsistencia(adminEmail, {
+              ...datosBase,
+              tipo: 'ausente',
+              asistencia_id: savedAusente.id_asistencia,
+            });
+            this.logger.warn(`[CRON] sendAlertaAsistencia llamado para asistencia #${savedAusente.id_asistencia}`);
+          }
         }
       }
     } catch (error) {

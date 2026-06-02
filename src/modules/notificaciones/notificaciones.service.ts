@@ -12,7 +12,9 @@ export interface AlertaAsistenciaDatos {
   hora_fin: string;
   laboratorio: string;
   tipo: 'tarde' | 'ausente';
-  asistencia_id: number;
+  asistencia_id?: number;   // null para alertas de tardanza sin registro aún
+  horario_id?: number;      // necesario para dedup cuando no hay asistencia_id
+  usuario_id?: number;      // necesario para dedup cuando no hay asistencia_id
   fecha?: string;
 }
 
@@ -39,13 +41,26 @@ export class NotificacionesService {
     const tipoColor = datos.tipo === 'tarde' ? '#f59e0b' : '#ef4444';
     const asunto = `Alerta de asistencia - ${tipoLabel}`;
 
-    // Deduplicación: no reenviar si ya existe para esta asistencia y tipo
-    const existe = await this.notificacionesRepo.findOne({
-      where: { asistencia_id: datos.asistencia_id, tipo: tipoNotificacion },
-    });
+    // Deduplicación:
+    // - Con asistencia_id: buscar por asistencia_id + tipo
+    // - Sin asistencia_id (alerta tardanza): buscar por horario_id + usuario_id + tipo + fecha hoy
+    const dedupQb = this.notificacionesRepo
+      .createQueryBuilder('n')
+      .where('n.tipo = :tipo', { tipo: tipoNotificacion });
+
+    if (datos.asistencia_id != null) {
+      dedupQb.andWhere('n.asistencia_id = :aid', { aid: datos.asistencia_id });
+    } else {
+      dedupQb
+        .andWhere('n.horario_id = :hid', { hid: datos.horario_id })
+        .andWhere('n.usuario_id = :uid', { uid: datos.usuario_id })
+        .andWhere("DATE(n.creado_en AT TIME ZONE 'America/Bogota') = CURRENT_DATE AT TIME ZONE 'America/Bogota'");
+    }
+
+    const existe = await dedupQb.getOne();
     if (existe) {
       this.logger.log(
-        `sendAlertaAsistencia() → ya existe notificación para asistencia #${datos.asistencia_id} tipo ${tipoNotificacion}, omitiendo`,
+        `sendAlertaAsistencia() → ya existe notificación tipo ${tipoNotificacion} (asistencia=${datos.asistencia_id ?? 'n/a'}, horario=${datos.horario_id ?? 'n/a'}), omitiendo`,
       );
       return;
     }
@@ -106,7 +121,9 @@ export class NotificacionesService {
             tipo: tipoNotificacion,
             correo_destinatario: adminEmail,
             asunto,
-            asistencia_id: datos.asistencia_id,
+            asistencia_id: datos.asistencia_id ?? null,
+            horario_id: datos.horario_id ?? null,
+            usuario_id: datos.usuario_id ?? null,
             estado_id: estadoEnviada.id_estados,
           }),
         );
@@ -126,7 +143,9 @@ export class NotificacionesService {
             tipo: tipoNotificacion,
             correo_destinatario: adminEmail,
             asunto,
-            asistencia_id: datos.asistencia_id,
+            asistencia_id: datos.asistencia_id ?? null,
+            horario_id: datos.horario_id ?? null,
+            usuario_id: datos.usuario_id ?? null,
             estado_id: estadoFallida.id_estados,
           }),
         ).catch((e: Error) =>
