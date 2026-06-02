@@ -15,8 +15,8 @@ import { NotificacionesService } from './notificaciones.service';
       useFactory: (config: ConfigService) => ({
         transport: {
           host: config.get<string>('MAIL_HOST', 'smtp.gmail.com'),
-          port: parseInt(config.get<string>('MAIL_PORT', '587')),
-          secure: config.get<string>('MAIL_PORT') === '465',
+          port: parseInt(process.env.MAIL_PORT ?? '465'),
+          secure: process.env.MAIL_PORT === '465',
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
