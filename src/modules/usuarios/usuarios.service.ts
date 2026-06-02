@@ -1,5 +1,7 @@
 import {
   ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
@@ -71,6 +73,16 @@ export class UsuariosService {
 
   async remove(id: number): Promise<void> {
     const usuario = await this.findOne(id);
-    await this.usuariosRepository.remove(usuario);
+    try {
+      await this.usuariosRepository.remove(usuario);
+    } catch (error) {
+      if ((error as { code?: string }).code === '23503') {
+        throw new HttpException(
+          'No se puede eliminar el usuario porque tiene registros asociados (asistencia, horarios, tarjetas, etc.)',
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw error;
+    }
   }
 }
