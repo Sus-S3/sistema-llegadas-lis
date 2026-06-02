@@ -54,7 +54,7 @@ export class NotificacionesService {
       dedupQb
         .andWhere('n.horario_id = :hid', { hid: datos.horario_id })
         .andWhere('n.usuario_id = :uid', { uid: datos.usuario_id })
-        .andWhere("DATE(n.creado_en AT TIME ZONE 'America/Bogota') = CURRENT_DATE AT TIME ZONE 'America/Bogota'");
+        .andWhere("DATE(n.creado_en AT TIME ZONE 'America/Bogota') = (NOW() AT TIME ZONE 'America/Bogota')::date");
     }
 
     const existe = await dedupQb.getOne();
