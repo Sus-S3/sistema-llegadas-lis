@@ -101,6 +101,7 @@ export class AsistenciaCron {
         );
 
         if (adminEmail) {
+          this.logger.warn(`[CRON] Intentando enviar correo para ausencia id=${savedAusente.id_asistencia} usuario=${horario.usuario?.nombre}`);
           void this.notificacionesService.sendAlertaAsistencia(adminEmail, {
             usuario: horario.usuario?.nombre ?? `Usuario #${horario.usuario_id}`,
             dia: NOMBRE_DIA[horario.dia_semana] ?? String(horario.dia_semana),
@@ -110,6 +111,7 @@ export class AsistenciaCron {
             tipo: 'ausente',
             asistencia_id: savedAusente.id_asistencia,
           });
+          this.logger.warn(`[CRON] sendAlertaAsistencia llamado para asistencia #${savedAusente.id_asistencia}`);
         }
       }
     } catch (error) {
