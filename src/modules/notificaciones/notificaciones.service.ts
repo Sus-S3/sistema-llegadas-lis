@@ -107,6 +107,7 @@ export class NotificacionesService {
       this.logger.error(
         `sendAlertaAsistencia() → error al enviar correo a ${adminEmail}: ${(error as Error).message}`,
       );
+      this.logger.error('Error SMTP completo:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
       if (estadoFallida) {
         await this.notificacionesRepo.save(
