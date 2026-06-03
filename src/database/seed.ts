@@ -19,7 +19,12 @@ const ESTADOS_POR_CATEGORIA: Record<string, string[]> = {
   REEMPLAZO:     ['Pendiente', 'Aprobado', 'Rechazado'],
 };
 
-const ROLES = ['Auxiliar administrativo', 'Auxiliar de programación', 'Administrador'];
+const ROLES: { nombre: string; descripcion?: string }[] = [
+  { nombre: 'Auxiliar administrativo' },
+  { nombre: 'Auxiliar de programación' },
+  { nombre: 'Administrador' },
+  { nombre: 'Gestor de llegadas', descripcion: 'Acceso al registro de asistencias desde el laboratorio' },
+];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -67,10 +72,10 @@ async function seedRoles(
   console.log('[Seed] Roles');
 
   const rolMap = new Map<string, number>();
-  for (const nombre of ROLES) {
+  for (const { nombre, descripcion } of ROLES) {
     let rol = await repo.findOne({ where: { nombre } });
     if (!rol) {
-      rol = await repo.save(repo.create({ nombre, estado_id: estadoActivoId }));
+      rol = await repo.save(repo.create({ nombre, descripcion: descripcion ?? null, estado_id: estadoActivoId }));
       console.log(`[Seed]   ✓ ${nombre} (id=${rol.id_roles})`);
     } else if (rol.estado_id !== estadoActivoId) {
       rol.estado_id = estadoActivoId;
