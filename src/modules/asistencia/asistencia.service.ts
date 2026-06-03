@@ -24,11 +24,6 @@ const NOMBRE_DIA: Record<number, string> = {
   4: 'Jueves', 5: 'Viernes', 6: 'Sábado',
 };
 
-/** Devuelve minutos desde medianoche en la zona horaria del proyecto. */
-function minutosLocales(date: Date): number {
-  const local = new Date(date.toLocaleString('en-US', { timeZone: TZ }));
-  return local.getHours() * 60 + local.getMinutes();
-}
 
 @Injectable()
 export class AsistenciaService {
@@ -225,6 +220,22 @@ export class AsistenciaService {
       .leftJoinAndSelect('a.tarjeta', 't')
       .leftJoinAndSelect('a.estado', 'e')
       .where('DATE(a.fecha_hora) = :fecha', { fecha })
+      .orderBy('a.fecha_hora', 'DESC')
+      .getMany();
+  }
+
+  findMisAsistenciasJustificables(usuario_id: number): Promise<Asistencia[]> {
+    return this.asistenciaRepository
+      .createQueryBuilder('a')
+      .leftJoinAndSelect('a.estado', 'e')
+      .leftJoinAndSelect('a.horario', 'h')
+      .leftJoinAndSelect('h.laboratorio', 'l')
+      .leftJoinAndSelect('a.usuario', 'u')
+      .where('a.usuario_id = :usuario_id', { usuario_id })
+      .andWhere("e.nombre IN ('Tarde', 'Ausente')")
+      .andWhere(
+        'NOT EXISTS (SELECT 1 FROM tbl_justificaciones j WHERE j.asistencia_id = a.id_asistencia)',
+      )
       .orderBy('a.fecha_hora', 'DESC')
       .getMany();
   }
